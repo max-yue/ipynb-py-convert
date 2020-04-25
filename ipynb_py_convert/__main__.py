@@ -1,5 +1,6 @@
 import json
 import sys
+import os
 from os import path
 
 header_comment = '# %%\n'
@@ -13,7 +14,7 @@ def nb2py(notebook):
         cell_type = cell['cell_type']
 
         if cell_type == 'markdown':
-            result.append('%s"""\n%s\n"""'%
+            result.append("%s'''\n%s\n'''" %
                           (header_comment, ''.join(cell['source'])))
 
         if cell_type == 'code':
@@ -34,9 +35,6 @@ def py2nb(py_str):
         cell_type = 'code'
         if chunk.startswith("'''"):
             chunk = chunk.strip("'\n")
-            cell_type = 'markdown'
-        elif chunk.startswith('"""'):
-            chunk = chunk.strip('"\n')
             cell_type = 'markdown'
 
         cell = {
@@ -78,17 +76,17 @@ def convert(in_file, out_file):
     _, out_ext = path.splitext(out_file)
 
     if in_ext == '.ipynb' and out_ext == '.py':
-        with open(in_file, 'r') as f:
+        with open(in_file, 'r', encoding='utf-8') as f:
             notebook = json.load(f)
         py_str = nb2py(notebook)
-        with open(out_file, 'w') as f:
+        with open(out_file, 'w', encoding='utf-8') as f:
             f.write(py_str)
 
     elif in_ext == '.py' and out_ext == '.ipynb':
-        with open(in_file, 'r') as f:
+        with open(in_file, 'r', encoding='utf-8') as f:
             py_str = f.read()
         notebook = py2nb(py_str)
-        with open(out_file, 'w') as f:
+        with open(out_file, 'w', encoding='utf-8') as f:
             json.dump(notebook, f, indent=2)
 
     else:
@@ -97,12 +95,24 @@ def convert(in_file, out_file):
 
 def main():
     argv = sys.argv
+    if len(argv) == 2:
+        in_file = argv[1]
+        if os.path.splitext(in_file)[1] == ".py":
+            out_file = os.path.splitext(in_file)[0] + ".ipynb"
+        elif os.path.splitext(in_file)[1] == ".ipynb":
+            out_file = os.path.splitext(in_file)[0] + ".py"
+        argv.append(out_file)
+        
     if len(argv) < 3:
         print('Usage: ipynb-py-convert in.ipynb out.py')
         print('or:    ipynb-py-convert in.py out.ipynb')
         sys.exit(1)
 
     convert(in_file=argv[1], out_file=argv[2])
+    if os.path.isfile(out_file):
+        print("convert to file {} succeeded!".format(out_file))
+    else:
+        print("convert to file {} failed!".format(out_file))
 
 
 if __name__ == '__main__':
